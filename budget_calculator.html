@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Monthly Budget — Live. Build. Prosper.</title>
+<style>
+  :root {
+    --navy: #1a2940;
+    --mid:  #243b55;
+    --blue: #2e86ab;
+    --amber: #ef8c4c;
+    --green: #3bb273;
+    --gold:  #ffd166;
+    --row1:  #f5f8ff;
+    --row2:  #eaf0f9;
+    --input: #fffde7;
+    --calc:  #e8f0fe;
+    --text:  #1a2940;
+    --muted: #667;
+    --radius: 8px;
+    --shadow: 0 2px 12px rgba(26,41,64,.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4fa; color: var(--text); font-size: 13px; }
+
+  /* ── HEADER ── */
+  header { background: var(--navy); color: #fff; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 20px; font-weight: 700; letter-spacing: .5px; }
+  header small { color: var(--gold); font-size: 11px; display: block; margin-top: 2px; }
+  .month-selector { display: flex; align-items: center; gap: 10px; }
+  .month-selector select, .month-selector input[type=month] {
+    background: var(--mid); color: #fff; border: 1px solid var(--blue);
+    border-radius: 4px; padding: 6px 10px; font-size: 13px; cursor: pointer;
+  }
+  .btn { padding: 7px 16px; border: none; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+  .btn:hover { opacity: .85; }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-amber { background: var(--amber); color: #fff; }
+  .btn-gold  { background: var(--gold);  color: var(--navy); }
+  .btn-navy  { background: var(--navy);  color: #fff; }
+
+  /* ── TABS ── */
+  .tabs { display: flex; background: var(--mid); padding: 0 16px; gap: 2px; overflow-x: auto; }
+  .tab { padding: 10px 20px; color: #aabcd0; cursor: pointer; font-size: 12px; font-weight: 600;
+         border-bottom: 3px solid transparent; white-space: nowrap; transition: all .15s; }
+  .tab:hover { color: #fff; }
+  .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* ── KPI STRIP ── */
+  .kpi-strip { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; padding: 16px 20px; }
+  .kpi { background: #fff; border-radius: var(--radius); padding: 14px 18px; box-shadow: var(--shadow); border-left: 4px solid var(--blue); }
+  .kpi.income  { border-left-color: var(--green); }
+  .kpi.expense { border-left-color: var(--amber); }
+  .kpi.net     { border-left-color: var(--blue); }
+  .kpi.target  { border-left-color: var(--gold); }
+  .kpi label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .kpi .val   { font-size: 22px; font-weight: 800; margin-top: 4px; }
+  .kpi.income .val  { color: var(--green); }
+  .kpi.expense .val { color: var(--amber); }
+  .kpi.net .val     { color: var(--blue); }
+  .kpi.target .val  { color: var(--navy); }
+
+  /* ── PANEL ── */
+  .panel { display: none; padding: 0 20px 24px; }
+  .panel.active { display: block; }
+
+  /* ── SECTION ── */
+  .section-hdr { background: var(--navy); color: #fff; padding: 8px 14px; border-radius: var(--radius) var(--radius) 0 0;
+                  font-size: 11px; font-weight: 700; letter-spacing: .5px; display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
+  .section-hdr .add-btn { background: var(--gold); color: var(--navy); border: none; border-radius: 4px;
+                           padding: 3px 10px; font-size: 11px; font-weight: 700; cursor: pointer; }
+
+  /* ── TABLES ── */
+  .data-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 0 0 var(--radius) var(--radius); box-shadow: var(--shadow); }
+  .data-table th { background: var(--mid); color: #fff; padding: 7px 8px; font-size: 11px; font-weight: 600; text-align: center; }
+  .data-table th:first-child { text-align: left; }
+  .data-table td { padding: 5px 6px; border-bottom: 1px solid #e5eaf3; vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:nth-child(odd) td  { background: var(--row1); }
+  .data-table tr:nth-child(even) td { background: var(--row2); }
+  .data-table tr:hover td { background: #dceeff; }
+  .data-table td input, .data-table td select {
+    width: 100%; border: 1px solid #c9d6e8; border-radius: 4px; padding: 4px 6px;
+    font-size: 12px; background: var(--input); color: var(--text); outline: none;
+  }
+  .data-table td input:focus, .data-table td select:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(46,134,171,.15); }
+  .data-table td.calc-cell { background: var(--calc) !important; font-weight: 600; color: var(--navy); text-align: center; font-size: 12px; }
+  .data-table td.type-income  { color: var(--green); font-weight: 700; font-size: 11px; text-align: center; }
+  .data-table td.type-expense { color: var(--amber); font-weight: 700; font-size: 11px; text-align: center; }
+  .del-btn { background: none; border: none; color: #c0392b; cursor: pointer; font-size: 14px; padding: 2px 6px; }
+  .del-btn:hover { background: #ffeaea; border-radius: 4px; }
+
+  /* ── SNOWBALL SPECIFIC ── */
+  .snowball-target td { background: #fff8e1 !important; }
+  .snowball-target td.status-cell { color: var(--amber); font-weight: 700; }
+  .snowball-paid td { background: #e8f8ee !important; text-decoration: line-through; color: #aaa; }
+  .priority-badge { display: inline-block; background: var(--amber); color: #fff; border-radius: 12px;
+                    padding: 2px 10px; font-size: 10px; font-weight: 700; }
+
+  /* ── FOOTER ── */
+  .footer-bar { background: var(--navy); color: #aabcd0; text-align: center; padding: 10px; font-size: 10px; }
+
+  /* ── MODAL ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: var(--radius); padding: 24px; width: 420px; max-width: 95vw; box-shadow: 0 8px 40px rgba(0,0,0,.25); }
+  .modal h2 { font-size: 16px; color: var(--navy); margin-bottom: 16px; }
+  .modal p  { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+  .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ── NOTICE ── */
+  .notice { background: #e8f4fd; border-left: 4px solid var(--blue); padding: 10px 14px;
+             border-radius: 0 6px 6px 0; font-size: 12px; color: var(--mid); margin-top: 10px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 700px) {
+    .kpi-strip { grid-template-columns: repeat(2,1fr); }
+    header { flex-direction: column; gap: 10px; align-items: flex-start; }
+  }
+  @media print {
+    .tabs, header .month-selector, .btn, .del-btn, .section-hdr .add-btn { display: none !important; }
+    .panel { display: block !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div>
+    <h1>💰 Monthly Budget Calculator</h1>
+    <small>Live. Build. Prosper. LLC — Debt Snowball Edition</small>
+  </div>
+  <div class="month-selector">
+    <input type="month" id="monthPicker" title="Budget month"/>
+    <button class="btn btn-gold" onclick="copyToNewMonth()">📋 Copy → New Month</button>
+    <button class="btn btn-navy" onclick="exportData()">💾 Export JSON</button>
+    <button class="btn btn-blue" onclick="document.getElementById('importFile').click()">📂 Import</button>
+    <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)"/>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('budget', this)">📊 Budget</div>
+  <div class="tab" onclick="switchTab('snowball', this)">❄️ Snowball</div>
+  <div class="tab" onclick="switchTab('payments', this)">✅ Payments</div>
+  <div class="tab" onclick="switchTab('history', this)">🗓 Month History</div>
+</div>
+
+<!-- KPI STRIP -->
+<div class="kpi-strip">
+  <div class="kpi income">
+    <label>Total Income</label>
+    <div class="val" id="kpiIncome">$0.00</div>
+  </div>
+  <div class="kpi expense">
+    <label>Total Expenses</label>
+    <div class="val" id="kpiExpense">$0.00</div>
+  </div>
+  <div class="kpi net">
+    <label>Net Cash Flow</label>
+    <div class="val" id="kpiNet">$0.00</div>
+  </div>
+  <div class="kpi target">
+    <label>Snowball Target</label>
+    <div class="val" id="kpiSnowball">—</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ BUDGET TAB -->
+<div class="panel active" id="panel-budget">
+
+  <div class="section-hdr">
+    INCOME SOURCES
+    <button class="add-btn" onclick="addRow('income')">+ Add Income</button>
+  </div>
+  <table class="data-table">
+    <thead><tr>
+      <th style="width:30%">Source / Description</th>
+      <th>Expected ($/mo)</th>
+      <th>Received This Month</th>
+      <th>Δ Variance</th>
+      <th>Notes</th>
+      <th></th>
+    </tr></thead>
+    <tbody id="incomeBody"></tbody>
+  </table>
+
+  <div class="section-hdr" style="margin-top:20px">
+    RECURRING EXPENSES
+    <button class="add-btn" onclick="addRow('expense')">+ Add Expense</button>
+  </div>
+  <table class="data-table">
+    <thead><tr>
+      <th style="width:22%">Payee / Bill</th>
+      <th>Category</th>
+      <th>Monthly Amount</th>
+      <th>Paid This Month</th>
+      <th>Remaining</th>
+      <th>Due Date</th>
+      <th>Notes</th>
+      <th></th>
+    </tr></thead>
+    <tbody id="expenseBody"></tbody>
+  </table>
+
+  <div class="notice">
+    💡 <strong>Tab key</strong> moves between cells. All calculated fields update automatically. Yellow fields = your inputs.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ SNOWBALL TAB -->
+<div class="panel" id="panel-snowball">
+  <div style="display:flex; gap:16px; align-items:center; padding: 12px 0; flex-wrap:wrap;">
+    <div>
+      <label style="font-size:11px;font-weight:700;color:var(--muted)">PAYOFF METHOD</label>
+      <select id="snowballMethod" onchange="recalcSnowball()" style="margin-left:8px;padding:5px 10px;border:1px solid #c9d6e8;border-radius:4px;font-size:12px;">
+        <option value="snowball">❄️ Snowball (lowest balance first)</option>
+        <option value="avalanche">🌊 Avalanche (highest rate first)</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:700;color:var(--muted)">EXTRA MONTHLY FUNDS ($)</label>
+      <input type="number" id="extraFunds" value="0" min="0" step="10"
+             oninput="recalcSnowball()" style="margin-left:8px;width:100px;padding:5px 8px;border:1px solid #c9d6e8;border-radius:4px;font-size:13px;font-weight:700;background:var(--input)"/>
+    </div>
+    <button class="btn btn-blue" onclick="addDebt()">+ Add Debt</button>
+  </div>
+
+  <table class="data-table">
+    <thead><tr>
+      <th style="width:22%">Debt / Account</th>
+      <th>Current Balance</th>
+      <th>Interest Rate (%)</th>
+      <th>Min. Payment</th>
+      <th>Extra Payment</th>
+      <th>Total Payment</th>
+      <th>Est. Payoff</th>
+      <th>Priority</th>
+      <th></th>
+    </tr></thead>
+    <tbody id="snowballBody"></tbody>
+  </table>
+
+  <div class="notice" style="margin-top:12px">
+    ❄️ <strong>Snowball:</strong> Extra funds auto-assign to the highest-priority debt. When a debt hits $0, delete it — funds cascade to next. <strong>Avalanche</strong> mode targets highest interest rate instead.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ PAYMENTS TAB -->
+<div class="panel" id="panel-payments">
+  <div class="section-hdr">
+    PAYMENT LOG — <span id="currentMonthLabel"></span>
+    <button class="add-btn" onclick="addPayment()">+ Log Payment</button>
+  </div>
+  <table class="data-table">
+    <thead><tr>
+      <th>Date Paid</th>
+      <th style="width:25%">Payee / Account</th>
+      <th>Category</th>
+      <th>Amount Paid</th>
+      <th>Confirmation #</th>
+      <th>Notes</th>
+      <th></th>
+    </tr></thead>
+    <tbody id="paymentsBody"></tbody>
+  </table>
+  <div style="text-align:right; padding:12px 6px 0; font-size:15px; font-weight:700; color:var(--navy)">
+    Total Logged: <span id="paymentsTotal" style="color:var(--green)">$0.00</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ HISTORY TAB -->
+<div class="panel" id="panel-history">
+  <div class="section-hdr">MONTH-OVER-MONTH HISTORY</div>
+  <table class="data-table">
+    <thead><tr>
+      <th>Month</th>
+      <th>Income</th>
+      <th>Expenses</th>
+      <th>Net Flow</th>
+      <th>Total Paid to Debts</th>
+      <th>Actions</th>
+    </tr></thead>
+    <tbody id="historyBody"></tbody>
+  </table>
+  <div class="notice" style="margin-top:12px">
+    📋 Use <strong>"Copy → New Month"</strong> at the top to snapshot and carry forward. All months are stored in your browser (localStorage).
+  </div>
+</div>
+
+<!-- COPY MODAL -->
+<div class="modal-overlay" id="copyModal">
+  <div class="modal">
+    <h2>📋 Copy to New Month</h2>
+    <p>This will save the current month, then create a fresh budget sheet for the next month — carrying over all recurring items. Paid amounts and payment log will be cleared.</p>
+    <div style="margin-bottom:16px">
+      <label style="font-size:12px;font-weight:600">New Month:</label>
+      <input type="month" id="newMonthInput" style="margin-left:8px;padding:5px 10px;border:1px solid #c9d6e8;border-radius:4px;font-size:13px;"/>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-navy" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" onclick="confirmCopy()">✓ Copy & Start New Month</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer-bar">Live. Build. Prosper. LLC — Budget data stored locally in your browser. Export JSON to back up.</div>
+
+<script>
+// ─────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────
+let state = {
+  month: getCurrentMonthString(),
+  income:   [],
+  expenses: [],
+  debts:    [],
+  payments: [],
+  extraFunds: 0,
+  snowballMethod: 'snowball',
+  history: []
+};
+
+function getCurrentMonthString() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+function fmt(n) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return '$' + parseFloat(n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function uid() { return Math.random().toString(36).slice(2,9); }
+
+// ─────────────────────────────────────────────────────
+// STORAGE
+// ─────────────────────────────────────────────────────
+function save() {
+  localStorage.setItem('lbp_budget', JSON.stringify(state));
+}
+
+function load() {
+  const raw = localStorage.getItem('lbp_budget');
+  if (raw) {
+    try { state = JSON.parse(raw); } catch(e) {}
+  }
+  // defaults
+  if (!state.history) state.history = [];
+  if (!state.debts) state.debts = [];
+  if (!state.payments) state.payments = [];
+  if (!state.extraFunds) state.extraFunds = 0;
+  if (!state.snowballMethod) state.snowballMethod = 'snowball';
+  if (!state.income || !state.income.length) seedDefaults();
+}
+
+function seedDefaults() {
+  state.income = [
+    {id:uid(), desc:'Paycheck / Salary',       expected:5000, received:'', notes:'Primary job'},
+    {id:uid(), desc:'Side Income / Freelance',  expected:1000, received:'', notes:'Variable'},
+  ];
+  state.expenses = [
+    {id:uid(), desc:'Mortgage / Rent',     category:'Housing',        amount:1800, paid:'', due:'1st',  notes:''},
+    {id:uid(), desc:'Home Insurance',      category:'Housing',        amount:150,  paid:'', due:'',     notes:'Annual ÷ 12'},
+    {id:uid(), desc:'Car Payment',         category:'Transportation', amount:450,  paid:'', due:'15th', notes:''},
+    {id:uid(), desc:'Car Insurance',       category:'Transportation', amount:185,  paid:'', due:'5th',  notes:''},
+    {id:uid(), desc:'Electric',            category:'Utilities',      amount:120,  paid:'', due:'',     notes:''},
+    {id:uid(), desc:'Internet',            category:'Utilities',      amount:80,   paid:'', due:'',     notes:''},
+    {id:uid(), desc:'Cell Phone',          category:'Utilities',      amount:100,  paid:'', due:'',     notes:''},
+    {id:uid(), desc:'Groceries',           category:'Food',           amount:600,  paid:'', due:'',     notes:'Estimate'},
+    {id:uid(), desc:'Gas / Fuel',          category:'Transportation', amount:250,  paid:'', due:'',     notes:''},
+    {id:uid(), desc:'Health Insurance',    category:'Insurance',      amount:350,  paid:'', due:'',     notes:''},
+    {id:uid(), desc:'Netflix',             category:'Subscriptions',  amount:18,   paid:'', due:'',     notes:''},
+    {id:uid(), desc:'Spotify',             category:'Subscriptions',  amount:11,   paid:'', due:'',     notes:''},
+    {id:uid(), desc:'Gym',                 category:'Subscriptions',  amount:50,   paid:'', due:'',     notes:''},
+    {id:uid(), desc:'Credit Card 1 (min)', category:'Debt Payments',  amount:100,  paid:'', due:'',     notes:'See Snowball'},
+    {id:uid(), desc:'Credit Card 2 (min)', category:'Debt Payments',  amount:85,   paid:'', due:'',     notes:'See Snowball'},
+  ];
+  state.debts = [
+    {id:uid(), name:'Credit Card A',  balance:4200,  rate:24.99, minPayment:100, status:''},
+    {id:uid(), name:'Credit Card B',  balance:2800,  rate:19.99, minPayment:85,  status:''},
+    {id:uid(), name:'Medical Bill',   balance:950,   rate:0,     minPayment:0,   status:''},
+    {id:uid(), name:'Car Loan',       balance:12500, rate:6.99,  minPayment:450, status:''},
+    {id:uid(), name:'Student Loan',   balance:21000, rate:4.50,  minPayment:200, status:''},
+  ];
+}
+
+// ─────────────────────────────────────────────────────
+// RENDER — INCOME
+// ─────────────────────────────────────────────────────
+function renderIncome() {
+  const body = document.getElementById('incomeBody');
+  body.innerHTML = '';
+  state.income.forEach((row, idx) => {
+    const exp = parseFloat(row.expected)||0;
+    const rec = parseFloat(row.received)||0;
+    const variance = rec - exp;
+    const varColor = variance >= 0 ? 'var(--green)' : 'var(--amber)';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input value="${esc(row.desc)}" onchange="updateIncome('${row.id}','desc',this.value)" placeholder="Source description" tabindex="${idx*10+1}"/></td>
+      <td><input type="number" value="${row.expected||''}" onchange="updateIncome('${row.id}','expected',this.value)" tabindex="${idx*10+2}" min="0" step="0.01" placeholder="0.00" style="text-align:right"/></td>
+      <td><input type="number" value="${row.received||''}" onchange="updateIncome('${row.id}','received',this.value)" tabindex="${idx*10+3}" min="0" step="0.01" placeholder="0.00" style="text-align:right;background:var(--input)"/></td>
+      <td class="calc-cell" style="color:${varColor}">${variance===0&&!rec?'—':fmt(variance)}</td>
+      <td><input value="${esc(row.notes)}" onchange="updateIncome('${row.id}','notes',this.value)" tabindex="${idx*10+4}" placeholder="Notes"/></td>
+      <td><button class="del-btn" onclick="deleteRow('income','${row.id}')">✕</button></td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+function updateIncome(id, field, val) {
+  const row = state.income.find(r=>r.id===id);
+  if(row) { row[field] = val; save(); recalcKPIs(); }
+}
+
+function addRow(type) {
+  if(type==='income') {
+    state.income.push({id:uid(), desc:'', expected:'', received:'', notes:''});
+  } else {
+    state.expenses.push({id:uid(), desc:'', category:'Housing', amount:'', paid:'', due:'', notes:''});
+  }
+  save(); render();
+}
+
+function deleteRow(type, id) {
+  if(type==='income')   state.income   = state.income.filter(r=>r.id!==id);
+  if(type==='expense')  state.expenses = state.expenses.filter(r=>r.id!==id);
+  save(); render();
+}
+
+// ─────────────────────────────────────────────────────
+// RENDER — EXPENSES
+// ─────────────────────────────────────────────────────
+const CATS = ['Housing','Transportation','Utilities','Food','Insurance','Subscriptions','Debt Payments','Other'];
+const catOpts = CATS.map(c=>`<option>${c}</option>`).join('');
+
+function renderExpenses() {
+  const body = document.getElementById('expenseBody');
+  body.innerHTML = '';
+  state.expenses.forEach((row, idx) => {
+    const amt  = parseFloat(row.amount)||0;
+    const paid = parseFloat(row.paid)||0;
+    const rem  = amt - paid;
+    const remColor = rem > 0 ? 'var(--amber)' : 'var(--green)';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input value="${esc(row.desc)}" onchange="updateExp('${row.id}','desc',this.value)" placeholder="Payee / bill name" tabindex="${100+idx*10+1}"/></td>
+      <td>
+        <select onchange="updateExp('${row.id}','category',this.value)" tabindex="${100+idx*10+2}">
+          ${CATS.map(c=>`<option ${c===row.category?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </td>
+      <td><input type="number" value="${row.amount||''}" onchange="updateExp('${row.id}','amount',this.value)" tabindex="${100+idx*10+3}" min="0" step="0.01" placeholder="0.00" style="text-align:right"/></td>
+      <td><input type="number" value="${row.paid||''}" onchange="updateExp('${row.id}','paid',this.value)" tabindex="${100+idx*10+4}" min="0" step="0.01" placeholder="0.00" style="text-align:right;background:var(--input)"/></td>
+      <td class="calc-cell" style="color:${remColor}">${fmt(rem)}</td>
+      <td><input value="${esc(row.due)}" onchange="updateExp('${row.id}','due',this.value)" tabindex="${100+idx*10+5}" placeholder="e.g. 1st" style="width:60px;text-align:center"/></td>
+      <td><input value="${esc(row.notes)}" onchange="updateExp('${row.id}','notes',this.value)" tabindex="${100+idx*10+6}" placeholder="Notes"/></td>
+      <td><button class="del-btn" onclick="deleteRow('expense','${row.id}')">✕</button></td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+function updateExp(id, field, val) {
+  const row = state.expenses.find(r=>r.id===id);
+  if(row) { row[field] = val; save(); recalcKPIs(); renderExpenses(); }
+}
+
+// ─────────────────────────────────────────────────────
+// RENDER — SNOWBALL
+// ─────────────────────────────────────────────────────
+function addDebt() {
+  state.debts.push({id:uid(), name:'', balance:'', rate:'', minPayment:'', status:''});
+  save(); recalcSnowball();
+}
+
+function recalcSnowball() {
+  state.extraFunds = parseFloat(document.getElementById('extraFunds').value)||0;
+  state.snowballMethod = document.getElementById('snowballMethod').value;
+
+  // sort
+  let sorted = [...state.debts].filter(d=>d.name||d.balance);
+  if (state.snowballMethod === 'snowball') {
+    sorted.sort((a,b)=>(parseFloat(a.balance)||0)-(parseFloat(b.balance)||0));
+  } else {
+    sorted.sort((a,b)=>(parseFloat(b.rate)||0)-(parseFloat(a.rate)||0));
+  }
+  // assign target
+  sorted = sorted.map((d,i)=>({...d, priority: i===0&&sorted.length>0?1:i+1}));
+  state.debts = sorted;
+  save();
+  renderSnowball(sorted);
+  recalcKPIs();
+}
+
+function renderSnowball(sorted) {
+  const body = document.getElementById('snowballBody');
+  body.innerHTML = '';
+  const extra = state.extraFunds;
+
+  sorted.forEach((debt, idx) => {
+    const bal = parseFloat(debt.balance)||0;
+    const rate = parseFloat(debt.rate)||0;
+    const minP = parseFloat(debt.minPayment)||0;
+    const extraAssigned = idx === 0 ? extra : 0;
+    const totalP = minP + extraAssigned;
+    const estMonths = totalP > 0 ? Math.ceil(bal / totalP) : null;
+    const isTarget = idx === 0 && bal > 0;
+    const isPaid   = bal === 0;
+
+    const tr = document.createElement('tr');
+    if (isTarget) tr.classList.add('snowball-target');
+    if (isPaid)   tr.classList.add('snowball-paid');
+
+    tr.innerHTML = `
+      <td><input value="${esc(debt.name)}" onchange="updateDebt('${debt.id}','name',this.value)" placeholder="Debt name" tabindex="${200+idx*10+1}"/></td>
+      <td><input type="number" value="${debt.balance||''}" onchange="updateDebt('${debt.id}','balance',this.value)" tabindex="${200+idx*10+2}" min="0" step="0.01" placeholder="0.00" style="text-align:right;background:var(--input)"/></td>
+      <td><input type="number" value="${debt.rate||''}" onchange="updateDebt('${debt.id}','rate',this.value)" tabindex="${200+idx*10+3}" min="0" step="0.01" placeholder="0.00" style="text-align:right"/></td>
+      <td><input type="number" value="${debt.minPayment||''}" onchange="updateDebt('${debt.id}','minPayment',this.value)" tabindex="${200+idx*10+4}" min="0" step="0.01" placeholder="0.00" style="text-align:right"/></td>
+      <td class="calc-cell">${isTarget ? fmt(extra) : '$0.00'}</td>
+      <td class="calc-cell" style="font-weight:800;color:var(--navy)">${fmt(totalP)}</td>
+      <td class="calc-cell">${estMonths ? estMonths+' mo.' : '—'}</td>
+      <td class="calc-cell status-cell">
+        ${isTarget ? `<span class="priority-badge">🎯 TARGET</span>` : `<span style="color:var(--muted);font-size:11px">#${idx+1}</span>`}
+      </td>
+      <td><button class="del-btn" onclick="deleteDebt('${debt.id}')">✕</button></td>
+    `;
+    body.appendChild(tr);
+  });
+
+  // update kpi
+  document.getElementById('kpiSnowball').textContent =
+    sorted.length > 0 ? (sorted[0].name || '—') : '—';
+}
+
+function updateDebt(id, field, val) {
+  const d = state.debts.find(d=>d.id===id);
+  if(d) { d[field] = val; save(); recalcSnowball(); }
+}
+
+function deleteDebt(id) {
+  state.debts = state.debts.filter(d=>d.id!==id);
+  save(); recalcSnowball();
+}
+
+// ─────────────────────────────────────────────────────
+// RENDER — PAYMENTS
+// ─────────────────────────────────────────────────────
+function addPayment() {
+  const today = new Date().toISOString().slice(0,10);
+  state.payments.push({id:uid(), date:today, payee:'', category:'', amount:'', conf:'', notes:''});
+  save(); renderPayments();
+}
+
+function renderPayments() {
+  const body = document.getElementById('paymentsBody');
+  body.innerHTML = '';
+  let total = 0;
+  state.payments.forEach((p, idx) => {
+    total += parseFloat(p.amount)||0;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="date" value="${p.date||''}" onchange="updatePayment('${p.id}','date',this.value)" tabindex="${300+idx*10+1}" style="width:130px"/></td>
+      <td><input value="${esc(p.payee)}" onchange="updatePayment('${p.id}','payee',this.value)" tabindex="${300+idx*10+2}" placeholder="Payee name"/></td>
+      <td>
+        <select onchange="updatePayment('${p.id}','category',this.value)" tabindex="${300+idx*10+3}">
+          <option value="">— Category —</option>
+          ${CATS.map(c=>`<option ${c===p.category?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </td>
+      <td><input type="number" value="${p.amount||''}" onchange="updatePayment('${p.id}','amount',this.value)" tabindex="${300+idx*10+4}" min="0" step="0.01" placeholder="0.00" style="text-align:right;background:var(--input)"/></td>
+      <td><input value="${esc(p.conf)}" onchange="updatePayment('${p.id}','conf',this.value)" tabindex="${300+idx*10+5}" placeholder="Conf #"/></td>
+      <td><input value="${esc(p.notes)}" onchange="updatePayment('${p.id}','notes',this.value)" tabindex="${300+idx*10+6}" placeholder="Notes"/></td>
+      <td><button class="del-btn" onclick="deletePayment('${p.id}')">✕</button></td>
+    `;
+    body.appendChild(tr);
+  });
+  document.getElementById('paymentsTotal').textContent = fmt(total);
+}
+
+function updatePayment(id, field, val) {
+  const p = state.payments.find(p=>p.id===id);
+  if(p) { p[field] = val; save(); renderPayments(); }
+}
+
+function deletePayment(id) {
+  state.payments = state.payments.filter(p=>p.id!==id);
+  save(); renderPayments();
+}
+
+// ─────────────────────────────────────────────────────
+// RENDER — HISTORY
+// ─────────────────────────────────────────────────────
+function renderHistory() {
+  const body = document.getElementById('historyBody');
+  body.innerHTML = '';
+  if (!state.history.length) {
+    body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No history yet. Use "Copy → New Month" to archive months.</td></tr>';
+    return;
+  }
+  [...state.history].reverse().forEach(h => {
+    const net = (h.income||0) - (h.expenses||0);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight:700">${h.month}</td>
+      <td class="calc-cell" style="color:var(--green)">${fmt(h.income)}</td>
+      <td class="calc-cell" style="color:var(--amber)">${fmt(h.expenses)}</td>
+      <td class="calc-cell" style="color:${net>=0?'var(--blue)':'#c0392b'}">${fmt(net)}</td>
+      <td class="calc-cell">${fmt(h.debtPaid)}</td>
+      <td>
+        <button class="btn btn-blue" style="padding:3px 10px;font-size:11px" onclick="loadHistoryMonth('${h.month}')">📂 Load</button>
+      </td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+function loadHistoryMonth(month) {
+  const snap = state.history.find(h=>h.month===month);
+  if(!snap) return alert('Month not found.');
+  if(!confirm(`Load ${month}? Current data will be overwritten.`)) return;
+  state.income   = snap.incomeData   || [];
+  state.expenses = snap.expenseData  || [];
+  state.debts    = snap.debtData     || [];
+  state.payments = snap.paymentData  || [];
+  state.month    = month;
+  document.getElementById('monthPicker').value = month;
+  save(); render();
+  switchTabByName('budget');
+}
+
+// ─────────────────────────────────────────────────────
+// KPIs
+// ─────────────────────────────────────────────────────
+function recalcKPIs() {
+  const totalIncome   = state.income.reduce((s,r)=>s+(parseFloat(r.expected)||0),0);
+  const totalExpenses = state.expenses.reduce((s,r)=>s+(parseFloat(r.amount)||0),0);
+  const net = totalIncome - totalExpenses;
+  document.getElementById('kpiIncome').textContent  = fmt(totalIncome);
+  document.getElementById('kpiExpense').textContent = fmt(totalExpenses);
+  document.getElementById('kpiNet').textContent     = fmt(net);
+  document.getElementById('kpiNet').style.color     = net >= 0 ? 'var(--blue)' : '#c0392b';
+
+  // snowball target name
+  if(state.debts.length) {
+    const target = state.debts[0];
+    document.getElementById('kpiSnowball').textContent = target.name || '—';
+  }
+}
+
+// ─────────────────────────────────────────────────────
+// RENDER (all)
+// ─────────────────────────────────────────────────────
+function render() {
+  renderIncome();
+  renderExpenses();
+  recalcSnowball();
+  renderPayments();
+  renderHistory();
+  recalcKPIs();
+  document.getElementById('monthPicker').value = state.month;
+  document.getElementById('currentMonthLabel').textContent = state.month;
+  document.getElementById('extraFunds').value = state.extraFunds;
+  document.getElementById('snowballMethod').value = state.snowballMethod;
+}
+
+// ─────────────────────────────────────────────────────
+// TABS
+// ─────────────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.getElementById('panel-'+name).classList.add('active');
+  if(name==='history') renderHistory();
+}
+
+function switchTabByName(name) {
+  const tabs = document.querySelectorAll('.tab');
+  const names = ['budget','snowball','payments','history'];
+  const idx = names.indexOf(name);
+  switchTab(name, idx >= 0 ? tabs[idx] : null);
+}
+
+// ─────────────────────────────────────────────────────
+// COPY TO NEW MONTH
+// ─────────────────────────────────────────────────────
+function copyToNewMonth() {
+  // guess next month
+  const [y,m] = state.month.split('-').map(Number);
+  const nextM = m === 12 ? 1 : m+1;
+  const nextY = m === 12 ? y+1 : y;
+  document.getElementById('newMonthInput').value =
+    `${nextY}-${String(nextM).padStart(2,'0')}`;
+  document.getElementById('copyModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('copyModal').classList.remove('open');
+}
+
+function confirmCopy() {
+  const newMonth = document.getElementById('newMonthInput').value;
+  if(!newMonth) return alert('Please pick a month.');
+
+  // snapshot current
+  const totalIncome   = state.income.reduce((s,r)=>s+(parseFloat(r.expected)||0),0);
+  const totalExpenses = state.expenses.reduce((s,r)=>s+(parseFloat(r.amount)||0),0);
+  const debtPaid      = state.payments.reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+  const snapshot = {
+    month: state.month,
+    income: totalIncome,
+    expenses: totalExpenses,
+    debtPaid: debtPaid,
+    incomeData:   JSON.parse(JSON.stringify(state.income)),
+    expenseData:  JSON.parse(JSON.stringify(state.expenses)),
+    debtData:     JSON.parse(JSON.stringify(state.debts)),
+    paymentData:  JSON.parse(JSON.stringify(state.payments)),
+  };
+  // avoid dupes
+  state.history = state.history.filter(h=>h.month !== state.month);
+  state.history.push(snapshot);
+
+  // reset paid / received / payments for new month
+  state.income   = state.income.map(r=>({...r, received:''}));
+  state.expenses = state.expenses.map(r=>({...r, paid:''}));
+  state.payments = [];
+  state.month    = newMonth;
+
+  closeModal();
+  save();
+  render();
+  switchTabByName('budget');
+  alert(`✓ Copied! Now in ${newMonth}. Update any amounts that changed.`);
+}
+
+// ─────────────────────────────────────────────────────
+// EXPORT / IMPORT
+// ─────────────────────────────────────────────────────
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `budget_${state.month}.json`;
+  a.click();
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if(confirm(`Import budget data for ${imported.month||'?'}? This will overwrite current data.`)) {
+        state = imported;
+        if(!state.history) state.history = [];
+        save(); render();
+        alert('✓ Imported successfully.');
+      }
+    } catch(err) { alert('Import failed. Invalid JSON file.'); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ─────────────────────────────────────────────────────
+// UTILS
+// ─────────────────────────────────────────────────────
+function esc(str) {
+  return (str||'').toString().replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// month picker change
+document.getElementById('monthPicker').addEventListener('change', function() {
+  state.month = this.value;
+  save();
+  document.getElementById('currentMonthLabel').textContent = this.value;
+});
+
+// ─────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────
+load();
+render();
+</script>
+</body>
+</html>
