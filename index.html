@@ -120,6 +120,27 @@
     header { flex-direction: column; gap: 10px; align-items: flex-start; }
   }
   @media print {
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    body { background: #fff !important; font-size: 11px; }
+    header { background: #1a2940 !important; color: #fff !important; padding: 12px 20px; }
+    header .month-selector, .btn, .del-btn, .section-hdr .add-btn, .tabs, .notice, .footer-bar { display: none !important; }
+    .kpi-strip { grid-template-columns: repeat(4,1fr); gap: 8px; padding: 10px 16px; }
+    .kpi { border-left-width: 3px; padding: 8px 12px; box-shadow: none; border: 1px solid #ddd; }
+    .kpi .val { font-size: 16px; }
+    .panel { display: block !important; page-break-before: always; padding: 0 16px 16px; }
+    .panel:first-of-type { page-break-before: avoid; }
+    #panel-budget { page-break-before: avoid; }
+    .section-hdr { background: #1a2940 !important; color: #fff !important; -webkit-print-color-adjust: exact; }
+    .data-table th { background: #243b55 !important; color: #fff !important; }
+    .data-table tr:nth-child(odd) td { background: #f5f8ff !important; }
+    .data-table tr:nth-child(even) td { background: #eaf0f9 !important; }
+    .data-table td input, .data-table td select { border: none; background: transparent !important; font-size: 11px; }
+    .kpi.income .val { color: #3bb273 !important; }
+    .kpi.expense .val { color: #ef8c4c !important; }
+    .kpi.net .val { color: #2e86ab !important; }
+    .snowball-target td { background: #fff8e1 !important; }
+    .priority-badge { background: #ef8c4c !important; color: #fff !important; }
+    .calc-cell { background: #e8f0fe !important; }
     .tabs, header .month-selector, .btn, .del-btn, .section-hdr .add-btn { display: none !important; }
     .panel { display: block !important; }
   }
@@ -136,6 +157,7 @@
   <div class="month-selector">
     <input type="month" id="monthPicker" title="Budget month"/>
     <button class="btn btn-gold" onclick="copyToNewMonth()">📋 Copy → New Month</button>
+    <button class="btn btn-green" onclick="exportPDF()">📄 Export PDF</button>
     <button class="btn btn-navy" onclick="exportData()">💾 Export JSON</button>
     <button class="btn btn-blue" onclick="document.getElementById('importFile').click()">📂 Import</button>
     <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)"/>
@@ -782,6 +804,27 @@ document.getElementById('monthPicker').addEventListener('change', function() {
   save();
   document.getElementById('currentMonthLabel').textContent = this.value;
 });
+
+// ─────────────────────────────────────────────────────
+// PDF EXPORT
+// ─────────────────────────────────────────────────────
+function exportPDF() {
+  // Temporarily show all panels so they all print
+  const panels = document.querySelectorAll('.panel');
+  const prevDisplay = [];
+  panels.forEach((p, i) => {
+    prevDisplay[i] = p.style.display;
+    p.style.display = 'block';
+  });
+  const prevTitle = document.title;
+  document.title = 'Budget_' + state.month;
+  window.print();
+  document.title = prevTitle;
+  // Restore active panel after print dialog closes
+  setTimeout(() => {
+    panels.forEach((p, i) => { p.style.display = prevDisplay[i]; });
+  }, 1500);
+}
 
 // ─────────────────────────────────────────────────────
 // INIT
