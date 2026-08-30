@@ -484,7 +484,7 @@ function recalcSnowball() {
   state.snowballMethod = document.getElementById('snowballMethod').value;
 
   // sort
-  let sorted = [...state.debts].filter(d=>d.name||d.balance);
+  let sorted = [...state.debts].filter(d=>d.id);
   if (state.snowballMethod === 'snowball') {
     sorted.sort((a,b)=>(parseFloat(a.balance)||0)-(parseFloat(b.balance)||0));
   } else {
